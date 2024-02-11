@@ -1,0 +1,47 @@
+version: '2.4'
+
+services:
+
+  test-spring-db:
+    container_name: test-spring-db
+    image: postgres:16
+#    command: sh -c "apt-get update && apt-get install -y openssh-server && \
+#                    mkdir /var/run/sshd && echo 'root:root' | chpasswd && \
+#                    sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config \
+#                    sed 's@session\s*required\s*pam_loginuid.so@session optional pam_loginuid.so@g' -i /etc/pam.d/sshd \
+#                    /usr/sbin/sshd -D"
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - ${DB_MOUNT_LOCATION:-./pg-data/data}:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: test-spring
+    restart: always
+    healthcheck:
+      test: pg_isready -U postgres
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+
+#  test-spring:
+##    image: registry.gitlab.com/
+#    build: .
+#    mem_limit: 600M
+#    ports:
+#      - '14752:8080'
+#    environment:
+#      - SPRING_DATASOURCE_URL=jdbc:postgresql://test-spring-db:5432/test-spring
+#      - SPRING_DATASOURCE_USERNAME=postgres
+#      - SPRING_DATASOURCE_PASSWORD=postgres
+#      - SPRING_CLOUD_CONSUL_HOST=${SPRING_CLOUD_CONSUL_HOST}
+#      - SPRING_CLOUD_CONSUL_PORT=${SPRING_CLOUD_CONSUL_PORT}
+#      - SPRING_CLOUD_CONSUL_DISCOVERY_HOSTNAME=10.128.0.5
+#      - SPRING_CLOUD_CONSUL_DISCOVERY_PORT=14752
+#      - SPRING_CLOUD_CONSUL_DISCOVERY_METADATA_ENVIRONMENT=STAGING
+#    restart: always
+#    stop_grace_period: 45s
+#    depends_on:
+#      - test-spring-db
