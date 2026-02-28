@@ -1,23 +1,48 @@
-version: '2.4'
+version: '3.4'
+
+configs:
+  init-user-db:
+    file: ./config/pg-script/init-user-db.sh
+
 
 services:
 
-  test-spring-db:
+  pg:
     container_name: test-spring-db
-    image: postgres:16
+    image: postgres:${POSTGRES_VERSION}
 #    command: sh -c "apt-get update && apt-get install -y openssh-server && \
 #                    mkdir /var/run/sshd && echo 'root:root' | chpasswd && \
 #                    sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config \
 #                    sed 's@session\s*required\s*pam_loginuid.so@session optional pam_loginuid.so@g' -i /etc/pam.d/sshd \
 #                    /usr/sbin/sshd -D"
-    ports:
-      - "127.0.0.1:5432:5432"
+    command: "-c shared_preload_libraries=pg_stat_statements
+              -c pg_stat_statements.track=all
+              -c pg_stat_statements.max=10000
+              -c track_io_timing=on"
+    ports: 
+      - "127.0.0.1:5433:5432"
     volumes:
-      - ${DB_MOUNT_LOCATION:-./pg-data/data}:/var/lib/postgresql/data
+      - ${DB_MOUNT_LOCATION:-./data/pg-data/data}:/var/lib/postgresql/data
+      - ./data/pg-data/data/indexes:/var/lib/postgresql/data/indexes
+      - ./config/pg-script/pg_uuidv7/${POSTGRES_VERSION}/pg_uuidv7.so:/usr/lib/postgresql/${POSTGRES_VERSION}/lib/pg_uuidv7.so # https://pgxn.org/dist/pg_uuidv7/
+      - ./config/pg-script/pg_uuidv7/pg_uuidv7.control:/usr/share/postgresql/${POSTGRES_VERSION}/extension/pg_uuidv7.control
+      - ./config/pg-script/pg_uuidv7/pg_uuidv7--1.6.sql:/usr/share/postgresql/${POSTGRES_VERSION}/extension/pg_uuidv7--1.6.sql
+#      - ./config/pg-script:/docker-entrypoint-initdb.d
+    configs:
+      - source: init-user-db
+        target: /docker-entrypoint-initdb.d/init-user-db.sh
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+        reservations:
+          cpus: '0.25'
+    cpuset: "1"
     environment:
+      POSTGRES_VERSION: ${POSTGRES_VERSION}
+      POSTGRES_DB: test-spring
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: test-spring
     restart: always
     healthcheck:
       test: pg_isready -U postgres
@@ -25,6 +50,170 @@ services:
       timeout: 5s
       retries: 5
 
+
+  keycloak:
+    container_name: test-spring-keycloak
+    image: quay.io/keycloak/keycloak:23.0.6
+    user:  root
+    environment:
+      #      DB_VENDOR: h2
+      DB_VENDOR: postgres
+#      DB_ADDR: test-spring-db
+#      DB_DATABASE: keycloak
+#      DB_SCHEMA: public
+#      DB_USER: keycloak
+#      DB_PASSWORD: keycloak
+
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://test-spring-db:5432/test-spring
+      KC_DB_SCHEMA: keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: keycloak
+
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KEYCLOAK_USER: admin
+      KEYCLOAK_PASSWORD: admin
+
+
+#    entrypoint: ["ls", "-lshd", "/opt/keycloak/data/"]
+#    entrypoint: ["id"]
+#    command:
+#      - "chown keycloak /opt/keycloak/data/"
+#      - "/opt/keycloak/bin/kc.sh"
+#      - "start-dev"
+    command: "start-dev"
+    volumes:
+      - ./keycloak-data:/opt/keycloak/data/
+    ports:
+      - "8024:8080"
+    depends_on:
+      - pg
+
+
+  redis:
+    container_name: test-spring-redis
+    image: redis:7.4.1-alpine
+    command: ["redis-server"]
+    ports:
+      - "6379:6379"
+
+
+  redis-stack:
+    container_name: test-spring-redis-stack
+    image: redis/redis-stack:7.2.0-v18
+    ports:
+      - "6379:6379" # Redis server
+      - "8001:8001" # RedisInsight UI
+    volumes:
+      - ./data/redis/redis-stack-data:/data
+
+
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    depends_on:
+      - redis
+    environment:
+      - REDIS_HOSTS=redis:redis
+    ports:
+      - 8081:8081
+
+
+  neo4j:
+    image: neo4j:5.26.0-bullseye
+    environment:
+      - NEO4J_AUTH=none # default login is neo4j/neo4j
+    ports:
+      - "7474:7474" # web
+      - "7687:7687" # API
+    volumes:
+      - ./data/neo4j/data:/data
+
+
+  clickhouse:
+    image: 'clickhouse/clickhouse-server:${CLICKHOUSE_VERSION:-latest}'
+    user: '101:101'
+    container_name: clickhouse
+    hostname: clickhouse
+    volumes:
+      - ./config/clickhouse/server/config.xml:/etc/clickhouse-server/config.d/config.xml
+      - ./config/clickhouse/server/users.xml:/etc/clickhouse-server/users.d/users.xml
+    ports:
+      - '127.0.0.1:8123:8123'
+      - '127.0.0.1:9001:9000'
+    depends_on:
+      - clickhouse-keeper
+
+  clickhouse-keeper:
+    image: 'clickhouse/clickhouse-keeper:${CLICKHOUSE_KEEPER_VERSION:-latest-alpine}'
+    user: '101:101'
+    container_name: clickhouse-keeper
+    hostname: clickhouse-keeper
+    volumes:
+      - ./config/clickhouse/keeper/keeper_config.xml:/etc/clickhouse-keeper/keeper_config.xml
+    ports:
+      - '127.0.0.1:9181:9181'
+
+
+  portainer:
+    image: portainer/portainer-ce:alpine
+    container_name: portainer
+    command: -H unix:///var/run/docker.sock
+    ports:
+      - "9000:9000"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+      - "portainer_data:/data"
+    restart: always
+
+
+  prometheus:
+    image: prom/prometheus
+    user:  root
+    ports:
+      - 9090:9090
+    volumes:
+      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./data/prometheus:/prometheus
+    networks:
+      monitoring:
+        aliases:
+          - prometheus
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  grafana:
+    build: './config/grafana'
+    ports:
+      - 3000:3000
+    volumes:
+      - ./data/grafana:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    networks:
+      monitoring:
+        aliases:
+          - grafana
+    depends_on:
+      - prometheus
+
+
+#  https://opentelemetry.io/docs/specs/otlp/#otlphttp-request
+#  https://www.jaegertracing.io/docs/1.57/getting-started/#all-in-one
+  jaeger:
+    image: jaegertracing/all-in-one:1.68.0
+    ports:
+      - "4318:4318"   # OTLP
+      - "4317:4317"   # gRPC
+      - "16686:16686" # UI
+
+
+networks:
+  monitoring:
+
+volumes:
+  portainer_data:
 
 #  test-spring:
 ##    image: registry.gitlab.com/

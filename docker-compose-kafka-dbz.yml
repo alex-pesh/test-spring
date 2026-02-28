@@ -1,0 +1,206 @@
+version: '2.4'
+
+services:
+
+  pg:
+    container_name: test-spring-postgres
+    image: postgres:${POSTGRES_VERSION}
+    hostname: postgres
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+#      - ./postgresql.conf:/etc/postgresql.conf
+      - ./data/pg-data/data:/var/lib/postgresql/data
+      - ./data/pg-data/data/indexes:/var/lib/postgresql/data/indexes
+#    command: ["-c", "config_file=/etc/postgresql.conf"]
+#    command: ['postgres', '-c', 'wal_level=logical']
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: test-spring
+    restart: always
+    healthcheck:
+      test: pg_isready -U postgres
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+
+  kafka_1:
+    image: apache/kafka:${KAFKA_VERSION}
+    hostname: kafka_1
+    container_name: kafka_1
+    ports:
+      - '29092:29092'
+      - '9092:9092'
+      - '9101:9101'
+    volumes:
+      - ./data/kafka/kafka-logs:/tmp/kafka-logs
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_controller.quorum.bootstrap.servers: kafka_1:29092
+      KAFKA_controller.quorum.voters: 1@kafka_1:29092
+      KAFKA_controller.listener.names: INTERNAL
+      KAFKA_LISTENERS: INTERNAL://kafka_1:29092,DOCKER://kafka_1:39092,EXTERNAL://kafka_1:9092  # https://www.confluent.io/blog/kafka-listeners-explained/
+      KAFKA_ADVERTISED_LISTENERS: DOCKER://kafka_1:9092,EXTERNAL://localhost:9092
+      KAFKA_INTER_BROKER_LISTENER_NAME: EXTERNAL
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT,DOCKER:PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
+      KAFKA_JMX_PORT: 9101
+      KAFKA_JMX_HOSTNAME: localhost
+    healthcheck:
+      test: nc -z localhost 9092 || exit -1
+      start_period: 15s
+      interval: 5s
+      timeout: 10s
+      retries: 10
+
+
+  kui:
+    container_name: kafka-ui
+    image: provectuslabs/kafka-ui:v0.7.2
+    ports:
+      - 8090:8080
+    environment:
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka_1:39092
+      DYNAMIC_CONFIG_ENABLED: true
+    volumes:
+      - ./data/kafka/kui/config.yml:/etc/kafkaui/dynamic_config.yaml
+
+
+#
+#  zookeeper:
+#    image: confluentinc/cp-zookeeper:7.3.1
+#    hostname: zookeeper
+#    container_name: zookeeper
+#    ports:
+#      - '2181:2181'
+#    environment:
+#      ZOOKEEPER_CLIENT_PORT: 2181
+#      ZOOKEEPER_TICK_TIME: 2000
+#    healthcheck:
+#      test: echo srvr | nc zookeeper 2181 || exit 1
+#      start_period: 10s
+#      retries: 20
+#      interval: 10s
+#
+#  kafka_1:
+#    image: confluentinc/cp-kafka:7.3.1
+#    hostname: kafka_1
+#    container_name: kafka_1
+#    depends_on:
+#      zookeeper:
+#        condition: service_healthy
+#    ports:
+#      - '29092:29092'
+#      - '9092:9092'
+#      - '9101:9101'
+#    environment:
+#      KAFKA_BROKER_ID: 1
+#      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+#      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+#      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka_1:29092,PLAINTEXT_HOST://localhost:9092
+#      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+#      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+#      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+#      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+#      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
+#      KAFKA_JMX_PORT: 9101
+#      KAFKA_JMX_HOSTNAME: localhost
+#    healthcheck:
+#      test: nc -z localhost 9092 || exit -1
+#      start_period: 15s
+#      interval: 5s
+#      timeout: 10s
+#      retries: 10
+
+
+#  schema-registry:
+#    image: confluentinc/cp-schema-registry:7.3.1
+#    hostname: schema-registry
+#    container_name: schema-registry
+#    depends_on:
+#      kafka_1:
+#        condition: service_healthy
+#    ports:
+#      - '8081:8081'
+#    environment:
+#      SCHEMA_REGISTRY_HOST_NAME: schema-registry
+#      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: kafka_1:29092
+#      SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
+#    healthcheck:
+#      start_period: 10s
+#      interval: 10s
+#      retries: 20
+#      test: curl --user superUser:superUser --fail --silent --insecure http://localhost:8081/subjects --output /dev/null || exit 1
+
+  rest-proxy:
+    image: confluentinc/cp-kafka-rest:7.3.1
+    depends_on:
+      kafka_1:
+        condition: service_healthy
+    ports:
+      - '8082:8082'
+    hostname: rest-proxy
+    container_name: rest-proxy
+    environment:
+      KAFKA_REST_HOST_NAME: rest-proxy
+      KAFKA_REST_BOOTSTRAP_SERVERS: 'kafka_1:29092'
+      KAFKA_REST_LISTENERS: 'http://0.0.0.0:8082'
+
+
+  debezium:
+    image: debezium/connect:${DEBEZIUM_VERSION}
+    restart: always
+    container_name: debezium
+    hostname: debezium
+    depends_on:
+      pg:
+        condition: service_started
+      kafka_1:
+        condition: service_started
+    ports:
+      - '8083:8083'
+    environment:
+      GROUP_ID: 1
+      BOOTSTRAP_SERVERS: kafka_1:39092
+      CONFIG_STORAGE_TOPIC: connect_configs
+      STATUS_STORAGE_TOPIC: connect_statuses
+      OFFSET_STORAGE_TOPIC: connect_offsets
+      KEY_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      VALUE_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      ENABLE_DEBEZIUM_SCRIPTING: 'true'
+    command:
+      - bash
+      - -c
+      - |
+        echo "Installing connector plugins"
+        confluent-hub install --no-prompt debezium/debezium-connector-postgresql:2.2.1
+        echo "Launching Kafka Connect worker"
+        /docker-entrypoint.sh start
+    healthcheck:
+      test:
+        ['CMD','curl','--silent','--fail','-X','GET','http://localhost:8083/connectors']
+      start_period: 10s
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+
+  debezium-ui:
+    image: debezium/debezium-ui:2.5
+    restart: always
+    container_name: debezium-ui
+    hostname: debezium-ui
+    depends_on:
+      debezium:
+        condition: service_healthy
+    ports:
+      - '8091:8080'
+    environment:
+      KAFKA_CONNECT_URIS: http://debezium:8083

@@ -1,0 +1,130 @@
+#debug: true
+spring:
+  application:
+    name: "test-spting"
+  h2:
+    console:
+      enabled: true
+  datasource:
+    url: jdbc:postgresql://localhost:5433/test-spring
+    driver-class-name: org.postgresql.Driver
+    username: postgres
+    password: postgres
+#    hikari.maximum-pool-size: 1
+  jpa.properties.javax.persistence.validation.mode: none
+  jpa.properties.hibernate:
+    jdbc.fetch_size: 1
+    dialect: org.hibernate.dialect.PostgreSQLDialect
+    hbm2ddl.auto: none
+    format_sql: true
+    use_sql_comments: true
+    proc.param_null_passing: true
+#    generate_statistics: true
+  jpa.show_sql: true
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+  data:
+    redis:
+      repositories.enabled: true
+
+
+redis:
+  host: 127.0.0.1
+  port: 6379
+
+
+logging.level:
+  org.springframework.security: DEBUG
+  org.flywaydb: DEBUG
+#  org.postgresql: TRACE
+#  org.hibernate.SQL: DEBUG
+#  org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+  org.hibernate.resource.jdbc: INFO
+  org.hibernate.type.descriptor.sql: INFO
+
+
+
+mail:
+  hostname: mailer@mail.com
+  port: 9000
+  from: mailer@mail.com
+
+  default-recipients:
+    -admin@mail.com
+    -owner@mail.com
+
+  additional-headers:
+    redelivery: true
+    secure: true
+
+  credentials:
+    username: alex
+    password: password
+    auth-method: SHA1
+  credentials2:
+    alex;password;SHA1
+
+
+conversion:
+  timeInDefaultUnit: 10
+  timeInNano: 9ns
+  timeInDays: 2
+
+  sizeInDefaultUnit: 300
+  sizeInGB: 2GB
+  sizeInTB: 4
+
+
+api:
+  version: "v1"
+  endpoint:
+    user: "/user"
+
+
+nats:
+  enabled: false
+  url: "nats://localhost:4222"
+
+
+
+server:
+  port: 8080
+  http2.enabled: true
+  compression:
+    enabled: true
+    min-response-size: 30
+  error:
+    include-message: always
+    include-stacktrace: always
+#  servlet:
+#    contextPath: "/api/${api.version}"
+
+
+management:
+  server.port: ${server.port}
+  tracing:
+    enabled: false
+    sampling.probability: 1.0 # 100% sampling is expensive, so value must be decreased for prod
+  otlp.tracing.endpoint: http://localhost:4318/v1/traces
+  endpoints:
+    enabled-by-default: true
+    web.exposure.include: health,prometheus
+    jmx.exposure.include: '*'
+  endpoint:
+    metrics.enabled: true
+    prometheus.enabled: true
+    health:
+      enabled: true
+      probes.enabled: true
+      show-details: always
+      cache.time-to-live: 10000
+  metrics:
+    export.prometheus.enabled: true
+    tags:
+      application: ${spring.application.name}
+    distribution:
+      percentiles-histogram:
+        "[http.server.requests]": true

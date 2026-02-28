@@ -1,0 +1,24 @@
+{
+  "name": "users-db-connector",
+  "config": {
+    "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+    "database.dbname": "postgres",
+    "database.history.kafka.bootstrap.servers": "kafka:9092",
+    "database.history.kafka.topic": "schema-changes.users",
+    "database.hostname": "postgres",
+    "database.password": "postgres",
+    "database.port": "5432",
+    "database.server.name": "postgres",
+    "database.user": "postgres",
+    "name": "users-db-connector",
+    "plugin.name": "pgoutput",
+    "table.include.list": "test_sprint.users",
+    "tasks.max": "1",
+    "topic.creation.default.cleanup.policy": "delete",
+    "topic.creation.default.partitions": "1",
+    "topic.creation.default.replication.factor": "1",
+    "topic.creation.default.retention.ms": "604800000",
+    "topic.creation.enable": "true",
+    "topic.prefix": "postgres"
+  }
+}

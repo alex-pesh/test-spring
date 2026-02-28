@@ -1,0 +1,5 @@
+
+### Create
+GET {{url}}/user/create
+Accept: application/json
+Authorization: Basic user userPass

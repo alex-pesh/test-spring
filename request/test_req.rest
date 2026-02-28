@@ -1,0 +1,17 @@
+### Login
+GET {{url}}/login
+Accept: "application/text"
+Authorization: Basic user userPass
+
+### Logout
+GET {{url}}/logout?logout
+Accept: "application/text"
+
+
+### Service
+GET {{url}}/{{basePath}}/service
+Accept: "application/json"
+Authorization: Basic user userPass
+### Authorization: Bearer {{accessToken}}
+### X-Auth: {{jwt}}
+
