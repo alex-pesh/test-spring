@@ -13,12 +13,12 @@ import io.micrometer.observation.annotation.Observed;
 import jakarta.annotation.PostConstruct;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
-import lombok.RequiredArgsConstructor;
 import org.hibernate.SessionFactory;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.Scope;
+import org.springframework.context.annotation.ScopedProxyMode;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -34,7 +34,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
 
 @Service
-@RequiredArgsConstructor
+@Scope(value = "custom", proxyMode = ScopedProxyMode.TARGET_CLASS)
 public class ExampleServiceImpl implements ExampleService {
 
 	private static final Logger log = org.slf4j.LoggerFactory.getLogger(ExampleServiceImpl.class);
@@ -57,6 +57,18 @@ public class ExampleServiceImpl implements ExampleService {
 	private SessionFactory sessionFactory;
 
 	private Object lock = new Object();
+
+	public ExampleServiceImpl(UserRepository userRepository, UserDetailsRepository userDetailsRepository, JobPositionRepository jobPositionRepository, EmailProperties emailProperties, MeasureProperties measureProperties, ApplicationContext ctx, RedisTemplate<String, String> redisTemplate, RedisTemplate<String, byte[]> redisTemplateRaw, ProductService productService) {
+		this.userRepository = userRepository;
+		this.userDetailsRepository = userDetailsRepository;
+		this.jobPositionRepository = jobPositionRepository;
+		this.emailProperties = emailProperties;
+		this.measureProperties = measureProperties;
+		this.ctx = ctx;
+		this.redisTemplate = redisTemplate;
+		this.redisTemplateRaw = redisTemplateRaw;
+		this.productService = productService;
+	}
 
 
 	@PostConstruct

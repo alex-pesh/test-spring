@@ -64,6 +64,7 @@ WHERE backend_xid IS NOT NULL OR xact_start IS NOT NULL;
 select * from pg_stat_activity;
 
 
+vacuum analyze ;
 
 
 -- Список всех активных блокировок с именами таблиц

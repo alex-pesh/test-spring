@@ -1,12 +1,33 @@
 package com.example.config;
 
+import com.example.config.scope.CustomScope;
 import jakarta.servlet.Filter;
+import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.config.BeanFactoryPostProcessor;
+import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
+import org.springframework.beans.factory.config.CustomScopeConfigurer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.filter.ShallowEtagHeaderFilter;
 
 @Configuration(proxyBeanMethods = true)
-public class ApplicationConfig {
+public class ApplicationConfig implements BeanFactoryPostProcessor {
+
+
+	@Override
+	public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
+		beanFactory.registerScope("custom", new CustomScope());
+	}
+
+/*
+	@Bean
+	public static CustomScopeConfigurer customScopeConfigurer() {
+		CustomScopeConfigurer configurer = new CustomScopeConfigurer();
+		configurer.addScope("custom", new CustomScope());
+		return configurer;
+	}
+*/
+
 
 	@Bean
 	public Filter etagEtagHeaderFilter() {

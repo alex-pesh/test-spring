@@ -6,19 +6,16 @@ import io.netty.handler.timeout.ReadTimeoutHandler;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.MediaType;
-import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
 import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
 import reactor.netty.http.client.HttpClient;
-import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.tcp.TcpClient;
 import reactor.netty.transport.logging.AdvancedByteBufFormat;
 
 import java.nio.charset.StandardCharsets;
-import java.time.LocalTime;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 

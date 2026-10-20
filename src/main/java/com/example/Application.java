@@ -4,6 +4,8 @@ package com.example;
 import com.example.config.ApplicationConfig;
 import com.example.config.RedisConfig;
 import com.example.service.ExampleService;
+import org.reactivestreams.Publisher;
+import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.BeanFactoryPostProcessor;
@@ -22,6 +24,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
 
@@ -37,7 +40,11 @@ public class Application {
 
 	public static void main(String[] args) {
 		Thread.currentThread().setName("test-spring-thread-main");
-		ConfigurableApplicationContext ctx = SpringApplication.run(Application.class, args);
+		SpringApplication app = new SpringApplication(Application.class);
+//		app.setAdditionalProfiles();
+		app.run(args);
+
+//		ConfigurableApplicationContext ctx = SpringApplication.run(Application.class, args);
 //		new Application().cmdRunner(null);
 	}
 
@@ -93,11 +100,7 @@ public class Application {
 		Scheduler scheduler_pub = Schedulers.newSingle("test-scheduler-pub", false);
 		Scheduler scheduler_sub = Schedulers.newSingle("test-scheduler-sub", true);
 
-//		Publisher publisher =
-//				Mono.fromCallable(() -> {
-//					Thread.sleep(1000);
-//					return 90;
-//				})
+
 		Flux.just(1, 2)
 				.subscribeOn(scheduler_pub)
 				.map(it -> it + 1)
@@ -112,10 +115,15 @@ public class Application {
 					System.out.printf("Consumed element:  %s;\t%s%n", item, Thread.currentThread());
 				});
 
-		Subscription s1 = null;
-		Subscription s2 = null;
+
 /*
-		publisher.subscribe(new Subscriber() {
+		Publisher<Object> publisher =
+				Mono.fromCallable(() -> {
+					Thread.sleep(1000);
+					return 90;
+				});
+
+		publisher.subscribe(new Subscriber<>() {
 			@Override
 			public void onSubscribe(Subscription s) {
 				System.out.println("onSubscribe-1");
@@ -136,7 +144,8 @@ public class Application {
 			public void onComplete() {
 				System.out.println("onComplete-1");
 			}
-		});*/
+		});
+*/
 
 
 

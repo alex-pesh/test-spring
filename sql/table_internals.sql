@@ -44,6 +44,10 @@ CREATE EXTENSION pgstattuple;
 SELECT * FROM pgstattuple(25079);
 
 
+-- Расширение pageinspect предоставляет функции для прямого чтения физических страниц (блоков) индекса и кучи (heap).
+-- Это мощный инструмент для отладки, но требует прав суперпользователя
+-- https://www.cybrosys.com/research-and-development/postgres/how-to-use-the-pageinspect-extension-in-postgresql-18
+-- https://database.diasoft.ru/docs/en/postgresql/versiya-177/pageinspect/
 
 -- see what’s inside the page.
 CREATE EXTENSION pageinspect;
@@ -74,6 +78,47 @@ SELECT * FROM heap_page_items(get_raw_page('t', 0));
 select * from pg_index;
 
 
+-- запрос для получения информации об индексах
+SELECT
+    n.nspname as schema_name,
+    c.relname as table_name,
+    i.relname as index_name,
+    i.relname as index_name,
+    idx.indkey as index_columns_attnums,
+    idx.indisunique as is_unique,
+    idx.indisprimary as is_primary,  
+    pg_get_indexdef(i.oid) as index_definition
+FROM
+    pg_index idx
+JOIN pg_class i ON i.oid = idx.indexrelid
+JOIN pg_class c ON c.oid = idx.indrelid
+JOIN pg_namespace n ON n.oid = c.relnamespace
+WHERE
+	n.nspname NOT IN ('pg_catalog', 'pg_toast', 'information_schema') -- Исключаем системные индексы
+ORDER BY schema_name, table_name, index_name;
+
+
+
+--- запрос статистики использования индекса
+SELECT
+    schemaname,
+    relname as table_name,
+    indexrelname as index_name,
+    idx_scan as number_of_scans,
+    idx_tup_read as tuples_read,
+    idx_tup_fetch as tuples_fetched
+FROM
+    pg_stat_user_indexes
+ORDER BY
+    idx_scan ASC; -- Сначала индексы с наименьшим числом сканирований
+    
+
+    
+--CREATE EXTENSION pageinspect;
+select * from heap_page_items(get_raw_page('department_pkey', 1));  
+
+
+
 select pg_size_pretty(pg_total_relation_size('idx_t_a'));
 
 
@@ -87,14 +132,6 @@ select indexrelid::regclass index_name, indrelid::regclass table_name from pg_in
 select * from pg_am;
 
 
------------------------------------------------------------------
-
--- Информация о блокировках
-select mode, granted from pg_locks;
-
-select c.relname, c.relkind, l.pid, l.mode, l.*
-from  pg_locks l
-join pg_class c on l.relation = c.oid;
 
 
 -----------------------------------------------------------------

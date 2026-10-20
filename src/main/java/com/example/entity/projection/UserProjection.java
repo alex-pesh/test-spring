@@ -24,7 +24,13 @@ public class UserProjection {
 		public String getInfo() {
 			return username() + " " + email();
 		}
-
 	}
+
+
+	public record UserFull (
+			Long id,
+			String name,
+			String username,
+			String email) {}
 
 }

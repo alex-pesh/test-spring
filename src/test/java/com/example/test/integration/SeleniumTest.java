@@ -4,15 +4,23 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.openqa.selenium.By;
+import org.openqa.selenium.Pdf;
+import org.openqa.selenium.PrintsPage;
 import org.openqa.selenium.WebElement;
+import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
+import org.openqa.selenium.print.PrintOptions;
 import org.openqa.selenium.remote.RemoteWebDriver;
 import org.openqa.selenium.support.ui.WebDriverWait;
 import org.testcontainers.containers.BrowserWebDriverContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.time.Duration;
+import java.util.Base64;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -38,6 +46,22 @@ public class SeleniumTest {
 
 
 	@Test
+	void printPage() throws IOException {
+		driver.get("https://books.yandex.ru/reader/xk0okOPa?resource=book");
+
+		PrintOptions printOptions = new PrintOptions();
+		printOptions.setOrientation(PrintOptions.Orientation.LANDSCAPE);
+		PrintsPage printer = (PrintsPage) driver;
+		Pdf printedPage = printer.print(printOptions);
+
+
+		Pdf pdf = driver.print(new PrintOptions());
+		byte[] pdfContent = Base64.getDecoder().decode(pdf.getContent());
+		Files.write(Paths.get("./web_print_test.pdf"), pdfContent);
+	}
+
+
+//	@Test
 	void testViewHomePage() {
 		String baseUrl = "https://www.vpnjantit.com/create-free-account?server=bg2&type=OpenVPN";
 		driver.get(baseUrl);

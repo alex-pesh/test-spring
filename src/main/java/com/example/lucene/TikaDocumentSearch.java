@@ -18,35 +18,51 @@ import org.apache.lucene.search.TopDocs;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
 import org.apache.tika.Tika;
+import org.apache.tika.detect.EncodingDetector;
+import org.apache.tika.language.detect.LanguageDetector;
+import org.apache.tika.language.detect.LanguageResult;
 import org.apache.tika.metadata.Metadata;
 import org.apache.tika.parser.ParseContext;
+import org.apache.tika.parser.Parser;
+import org.apache.tika.parser.html.JSoupParser;
+import org.apache.tika.parser.http.HttpParser;
 import org.apache.tika.sax.BodyContentHandler;
+import org.apache.tika.sax.ToTextContentHandler;
+import org.xml.sax.ContentHandler;
+import org.xml.sax.helpers.DefaultHandler;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.IOException;
 import java.io.InputStream;
+import java.net.URI;
 import java.net.URL;
 import java.net.URLConnection;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.*;
 
 
 @Slf4j
 public class TikaDocumentSearch {
 
-	private static final Path indexDirectoryPath = Path.of("/home/alexander/workspace/project/test-spring/data/lucene/index/tika");
+	private static final Path indexDirectoryPath = Path.of("/home/alexander/tikatest/index");
 	private static final Path[] documents = new Path[] {
-			Path.of("/home/alexander/tikatest/Object Oriented Software Construction-Meyer.pdf"),
-			Path.of("/home/alexander/tikatest/GNU Assembler.pdf"),
-			Path.of("/home/alexander/tikatest/Motion compensated video coding.pdf"),
-			Path.of("/home/alexander/tikatest/Debugging using DWARF-2012.pdf")
+//			Path.of("/home/alexander/tikatest/Object Oriented Software Construction-Meyer.pdf"),
+//			Path.of("/home/alexander/tikatest/GNU Assembler.pdf"),
+//			Path.of("/home/alexander/tikatest/Motion compensated video coding.pdf"),
+//			Path.of("/home/alexander/tikatest/Debugging using DWARF-2012.pdf"),
+			Path.of("/home/alexander/tikatest/Java.Coding.Problems.pdf"),
 	};
 
 
 	public static void main(String[] args) throws Exception {
 //		indexDocumentTest();
-		searchDocumentsTest("assembly");
+		searchDocumentsTest("capacitors");
+//		detectLanguage("");
+
 	}
+
 
 
 	public static void indexDocumentTest() throws Exception {
@@ -103,6 +119,15 @@ public class TikaDocumentSearch {
 
 		reader.close();
 		indexDirectory.close();
+	}
+
+
+
+	public static String detectLanguage(String text) throws IOException {
+		LanguageDetector detector = LanguageDetector.getDefaultLanguageDetector().loadModels();
+		LanguageResult result = detector.detect("hello");
+//		LanguageResult result = detector.detect(text);
+		return result.getLanguage();
 	}
 
 }

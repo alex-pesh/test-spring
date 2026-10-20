@@ -475,10 +475,97 @@ full outer join t2 on
 
 
 
+select ctid, xmin, xmax, pg_backend_pid(), *  
+from t where id = 1 FOR KEY SHARE;
+
+
+update t2 set is_active = true where id = 100029;
 
 
 
 
+begin isolation level serializable;
+
+explain (analyze, buffers, WAL) 
+select * from t where a = 2 FOR NO KEY UPDATE;
+
+update t set b = 'XXX' where id = 79482;
+
+update t  set c = not c where id = 79482;
 
 
+update t  set a = a+1 where id = 1;
+
+
+delete from t where a = 557;
+
+commit;
+
+rollback;
+
+
+
+select * from t order by id;
+
+update t set a = 1000 where id in (1, 2);
+
+
+
+
+begin; -- isolation level read committed;
+set lock_timeout = 120000;
+set deadlock_timeout = 120000;
+--update t set a = a - 500 where id = 1;
+update t set a = a + 500 where id = 2;
+
+update t set a = a - 500 where id = 1;
+
+
+rollback;
+
+
+explain(analyze, buffers)
+select a from t order by a desc limit 1;
+
+
+explain(analyze, buffers)
+select max(a) from t;
+
+
+select ctid, id, * from t where id = 85889;
+
+
+update t set b='qqq*' where id = 85889;
+
+SHOW wal_level;
+
+
+explain (analyze)
+with 
+t_1(id, val) as (
+	select 1, 'x' union all
+	select 2, 'b' union all
+	select 3, 'c' union all
+	select 4, 'd' union all
+	select 5, 'e' union all
+	select 1, 'x' union 
+	select 6, 'f'
+)
+select *
+from t_1 
+order by id;
+
+
+
+select id, a from t where not c;
+
+
+
+begin isolation level serializable ;    
+select id from t where c = true for update;
+update t set c = false where id = 321;
+
+commit;
+
+rollback;
 

@@ -182,3 +182,52 @@ sum(a) FILTER (WHERE a > 200) OVER (PARTITION BY t) sum_filter -- суммиро
 
 FROM data
 ORDER BY t;
+
+
+
+---
+
+--explain (analyze)
+
+WITH T(StyleID, ID)
+ AS (SELECT -1, 1 UNION ALL
+     SELECT 1, 2 UNION ALL
+     SELECT 1, 2 UNION ALL
+     SELECT 1, 3 UNION ALL
+     SELECT 1, 4 UNION ALL
+     
+     SELECT -2, 5 UNION ALL
+     SELECT 2, 6 UNION ALL
+     
+     SELECT -3, 7 UNION ALL
+     SELECT 3, 8 UNION ALL
+     SELECT 3, 9 UNION ALL
+     
+     SELECT 4, 10)
+     
+SELECT
+	sum(case when styleid > 0 then styleid else 0 end) as pos,
+	sum(case when styleid < 0 then styleid else 0 end) as neg
+from T t;
+
+
+
+
+vacuum analyze t;
+
+explain (analyze, buffers)
+select b, a from t
+union
+select b, a from t;
+
+
+select 0::double precision;
+
+
+
+
+
+
+
+
+

@@ -75,10 +75,43 @@ select ctid, xmin, xmax, pg_backend_pid(), *
 from t where id = 1 FOR UPDATE;
 
 
+-------------------------------------------------
+
+
 update t  set a = a where id = 1;
 
 
-rollback;
 
 SELECT * FROM heap_page_items(get_raw_page('t', 0));
+
+
+update t set t2_id = t.id where a in (1,2,3);
+
+update t set t2_id = 100029 where id = 100028; 
+
+
+
+
+begin isolation level repeatable read;
+
+select * from t where a = 557;
+
+
+begin isolation level serializable;
+select * from t where a = 2 FOR /*NO */KEY SHARE;
+
+
+update t set a = a + 1 where a = 555;
+
+
+select sum(a) from t where id < 100;
+update t  set a = a+1 where id = 2;
+
+
+commit;
+
+rollback;
+
+
+
 

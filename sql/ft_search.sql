@@ -79,4 +79,12 @@ where tablename = 'route';
 
 
 
+select
+	count(*),
+	date_trunc('month', created_date) as created_month
+from route
+group by created_month ;
+
+
+
 

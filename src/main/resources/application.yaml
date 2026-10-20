@@ -30,6 +30,14 @@ spring:
     redis:
       repositories.enabled: true
 
+  kafka:
+    consumer:
+      enable-auto-commit: false
+      auto-offset-reset: earliest
+    producer:
+      retries: 3
+      acks: all
+      enable-idempotence: true
 
 redis:
   host: 127.0.0.1
@@ -89,7 +97,6 @@ nats:
   url: "nats://localhost:4222"
 
 
-
 server:
   port: 8080
   http2.enabled: true
@@ -103,15 +110,17 @@ server:
 #    contextPath: "/api/${api.version}"
 
 
+
 management:
   server.port: ${server.port}
   tracing:
     enabled: false
     sampling.probability: 1.0 # 100% sampling is expensive, so value must be decreased for prod
   otlp.tracing.endpoint: http://localhost:4318/v1/traces
+#  zipkin.tracing.endpoint: "http://zipkin:9411/api/v2/spans"
   endpoints:
     enabled-by-default: true
-    web.exposure.include: health,prometheus
+    web.exposure.include: health,metrics,prometheus
     jmx.exposure.include: '*'
   endpoint:
     metrics.enabled: true
@@ -128,3 +137,7 @@ management:
     distribution:
       percentiles-histogram:
         "[http.server.requests]": true
+  health:
+    kafka:
+      enabled: true
+
